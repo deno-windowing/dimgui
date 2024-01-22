@@ -1,6 +1,7 @@
 import { join } from "https://deno.land/std@0.177.0/path/mod.ts";
 import { getBinFileName, getOutFileName, getTemptLibraryPath } from "./convention.ts";
 import { DIMGUI_VERSION } from "./version.ts";
+import { encodeBase64 } from "https://deno.land/std@0.212.0/encoding/base64.ts";
 
 function print(message: string) {
   console.log(`%c${message}`, "color: #888");
@@ -22,15 +23,12 @@ function embed(): void {
   const binFile = join(binPath, getBinFileName());
   const outFile = join(distPath, getOutFileName());
 
-  // deno-lint-ignore no-explicit-any
-  const encode = (Deno as any)[(Deno as any).internal]
-    .core
-    .ops.op_base64_encode;
-  const encodeLib = encode(Deno.readFileSync(binFile));
+  const encodeLib = encodeBase64(Deno.readFileSync(binFile));
 
   const outSource = [
+    `import { decodeBase64 } from "https://deno.land/std@0.212.0/encoding/base64.ts";`,
     `const BASE64 = "${encodeLib}";`,
-    `const DECODED = Deno.build.os === "${Deno.build.os}" && Deno.build.arch === "${Deno.build.arch}" ? Deno[Deno.internal].core.ops.op_base64_decode(BASE64) : new Uint8Array(); `,
+    `const DECODED = Deno.build.os === "${Deno.build.os}" && Deno.build.arch === "${Deno.build.arch}" ? decodeBase64(BASE64) : new Uint8Array(); `,
     `export default DECODED;`,
   ];
 
